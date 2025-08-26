@@ -1,0 +1,71 @@
+############################################
+# Root .gitignore for backend + frontend   #
+############################################
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.swn
+*.orig
+*.un~
+.idea/
+.vscode/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Build outputs / caches
+dist/
+build/
+out/
+tmp/
+temp/
+.cache/
+.eslintcache
+coverage/
+.nyc_output/
+.turbo/
+.vite/
+**/.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment files (keep examples)
+.env
+.env.*
+**/.env
+**/.env.*
+!*.env.example
+!*.env.*.example
+!**/.env.example
+!**/.env.*.example
+
+# Package archives
+*.tgz
+
+# Docker (optional local overrides/data)
+docker-data/
+docker/volumes/
+docker-compose.override.yml
+
+# MacOS/Linux trash
+.Trash-*/
+
+# Bun (do NOT ignore lockfiles like bun.lock or bun.lockb)
+# .bun/ (uncommon in repos; uncomment if generated locally)
+# .bun/
+
