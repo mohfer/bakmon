@@ -6,6 +6,7 @@ A simple app to monitor home server backup progress in real time over WebSocket.
 - Backend: Node.js WebSocket server
 - Frontend: Vite + React + TypeScript (Bun)
 - Docker: Optional for backend/deployment
+ - External tools (log producers): Proxmox vzdump (VM/LXC backup), rclone (OneDrive upload)
 
 ## Structure
 - `backend/` — WebSocket server (Dockerfile, docker-compose, server.js)
@@ -51,6 +52,9 @@ VITE_PORT=4000
 
 ## Log source and format
 
+- Sources:
+	- Proxmox VM/LXC backup logs produced by `vzdump` (backup job lifecycle output).
+	- Upload logs from `rclone` when sending archives to OneDrive.
 - Source file (rotated daily):
 	- `/var/log/backup-vm-YYYY-MM-DD.log` (date adjusts daily, e.g. `/var/log/backup-vm-2025-08-24.log`).
 - Lines recognized by the UI:
