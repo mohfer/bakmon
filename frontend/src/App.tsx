@@ -100,12 +100,10 @@ function App() {
   return (
     <div className="bg-black text-green-400 font-mono min-h-screen flex flex-col items-center px-2 sm:px-4 py-2 sm:py-4 overflow-x-hidden">
       <div className="w-full">
-        {/* Status */}
         <div className="mb-4 text-yellow-300 text-base sm:text-lg text-center">
           {status}
         </div>
 
-        {/* Summary progress */}
         <div className="mb-2 text-sm sm:text-base text-green-300 space-y-1">
           <div>Transferred: {progressDetail.transferred}</div>
           <div>Total: {progressDetail.total}</div>
@@ -115,7 +113,6 @@ function App() {
           <div>Elapsed time: {progressDetail.elapsed}</div>
         </div>
 
-        {/* Tombol kontrol */}
         <div className="flex gap-2 mb-2 flex-wrap">
           <button
             className="px-3 py-2 bg-gray-800 text-yellow-300 rounded text-sm sm:text-base"
@@ -143,7 +140,6 @@ function App() {
           </button>
         </div>
 
-        {/* Progress bar */}
         <div className="w-full bg-gray-800 rounded h-4 mb-2">
           <div
             className="bg-green-500 h-4 rounded transition-all duration-300"
@@ -154,7 +150,6 @@ function App() {
           {progress}%
         </div>
 
-        {/* Logs */}
         {showInfo && (
           <div className="mb-2">
             <div className="bg-gray-800 text-sm text-yellow-200 rounded p-2">
