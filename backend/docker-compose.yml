@@ -9,5 +9,4 @@ services:
     env_file:
       - .env
     volumes:
-      # Mount folder log dari host ke container (read-only biar aman)
       - /var/log:/var/log:ro
