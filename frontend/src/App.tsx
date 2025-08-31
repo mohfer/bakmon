@@ -16,7 +16,7 @@ function App() {
 
   const [logs, setLogs] = useState<string[]>([]);
   const [status, setStatus] = useState("Connecting...");
-  const [showLogs, setShowLogs] = useState(true);
+  const [showLogs, setShowLogs] = useState(false);
   const [progress, setProgress] = useState(0);
   const [infoLines, setInfoLines] = useState<string[]>([]);
   const [showInfo, setShowInfo] = useState(true);
