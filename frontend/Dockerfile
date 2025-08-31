@@ -1,0 +1,23 @@
+FROM oven/bun:1-alpine AS build
+WORKDIR /app
+
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile || bun install
+
+ARG VITE_IP_SERVER=localhost
+ARG VITE_PORT=4000
+ENV VITE_IP_SERVER=$VITE_IP_SERVER \
+    VITE_PORT=$VITE_PORT
+
+COPY . .
+RUN bun run build
+
+FROM nginx:1.27-alpine AS runtime
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
