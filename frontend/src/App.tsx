@@ -1,8 +1,18 @@
 import { useEffect, useState, useRef } from "react";
+import {
+  Box,
+  Button,
+  Callout,
+  Flex,
+  Progress,
+  Switch,
+  Text,
+} from "@radix-ui/themes";
+import { CheckCircledIcon, CrossCircledIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 
 function App() {
   const IP_SERVER = import.meta.env.VITE_IP_SERVER || "localhost";
-  const PORT = Number(import.meta.env.VITE_PORT) || 4000;
+  const PORT = import.meta.env.VITE_PORT || 4000;
 
   const [logs, setLogs] = useState<string[]>([]);
   const [status, setStatus] = useState("Connecting...");
@@ -31,10 +41,10 @@ function App() {
 
     ws.onopen = () => setStatus("✅ Connected to backend");
     ws.onclose = () => setStatus("❌ Disconnected from backend");
-    ws.onerror = (err) => {
-      console.error("WebSocket error:", err);
-      setStatus("⚠️ Error connecting to backend");
-    };
+    // ws.onerror = (err) => {
+    //   console.error("WebSocket error:", err);
+    //   setStatus("⚠️ Error connecting to backend");
+    // };
 
     ws.onmessage = (event: MessageEvent) => {
       const message =
@@ -77,8 +87,12 @@ function App() {
       }
     };
 
-    return () => ws.close();
-  }, [IP_SERVER, PORT]);
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (autoScroll && logContainerRef.current) {
@@ -98,86 +112,91 @@ function App() {
   };
 
   return (
-    <div className="bg-black text-green-400 font-mono min-h-screen flex flex-col items-center px-2 sm:px-4 py-2 sm:py-4 overflow-x-hidden">
-      <div className="w-full">
-        <div className="mb-4 text-yellow-300 text-base sm:text-lg text-center">
-          {status}
-        </div>
+    <Box p={{ initial: "2", sm: "4" }}>
+      <Flex direction="column" gap="3">
+        <Callout.Root color={status.startsWith("✅") ? "grass" : status.startsWith("❌") ? "tomato" : "amber"}>
+          <Callout.Icon>
+            {status.startsWith("✅") ? (
+              <CheckCircledIcon />
+            ) : status.startsWith("❌") ? (
+              <CrossCircledIcon />
+            ) : (
+              <InfoCircledIcon />
+            )}
+          </Callout.Icon>
+          <Callout.Text>{status}</Callout.Text>
+        </Callout.Root>
 
-        <div className="mb-2 text-sm sm:text-base text-green-300 space-y-1">
-          <div>Transferred: {progressDetail.transferred}</div>
-          <div>Total: {progressDetail.total}</div>
-          <div>Percent: {progressDetail.percent}%</div>
-          <div>Speed: {progressDetail.speed}</div>
-          <div>ETA: {progressDetail.eta}</div>
-          <div>Elapsed time: {progressDetail.elapsed}</div>
-        </div>
+        <Box>
+          <Flex direction="column" gap="1">
+            <Text size="2">Transferred: {progressDetail.transferred}</Text>
+            <Text size="2">Total: {progressDetail.total}</Text>
+            <Text size="2">Percent: {progressDetail.percent}%</Text>
+            <Text size="2">Speed: {progressDetail.speed}</Text>
+            <Text size="2">ETA: {progressDetail.eta}</Text>
+            <Text size="2">Elapsed time: {progressDetail.elapsed}</Text>
+          </Flex>
+        </Box>
 
-        <div className="flex gap-2 mb-2 flex-wrap">
-          <button
-            className="px-3 py-2 bg-gray-800 text-yellow-300 rounded text-sm sm:text-base"
-            onClick={() => setShowLogs((prev) => !prev)}
-          >
+        <Flex gap="2" wrap="wrap" align="center">
+          <Button variant="soft" color="yellow" onClick={() => setShowLogs((p) => !p)}>
             {showLogs ? "Hide Logs" : "Show Logs"}
-          </button>
-
+          </Button>
           {!autoScroll && (
-            <button
-              className="px-3 py-2 bg-green-600 text-white rounded text-sm sm:text-base"
-              onClick={() => {
-                logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-                setAutoScroll(true);
-              }}
-            >
+            <Button color="grass" onClick={() => {
+              logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+              setAutoScroll(true);
+            }}>
               Scroll to Bottom
-            </button>
+            </Button>
           )}
-          <button
-            className="px-3 py-2 bg-blue-700 text-white rounded text-sm sm:text-base"
-            onClick={() => setShowInfo((s) => !s)}
-          >
+          <Button color="indigo" variant="soft" onClick={() => setShowInfo((s) => !s)}>
             {showInfo ? "Hide Info" : "Show Info"}
-          </button>
-        </div>
+          </Button>
+          <Flex align="center" gap="2">
+            <Text size="2">Auto-scroll</Text>
+            <Switch checked={autoScroll} onCheckedChange={(v) => setAutoScroll(Boolean(v))} />
+          </Flex>
+        </Flex>
 
-        <div className="w-full bg-gray-800 rounded h-4 mb-2">
-          <div
-            className="bg-green-500 h-4 rounded transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div className="text-xs sm:text-sm text-right text-yellow-300 mb-2">
-          {progress}%
-        </div>
+        <Box>
+          <Progress value={progress} variant="surface" />
+          <Flex justify="end">
+            <Text size="1" color="amber">{progress}%</Text>
+          </Flex>
+        </Box>
 
         {showInfo && (
-          <div className="mb-2">
-            <div className="bg-gray-800 text-sm text-yellow-200 rounded p-2">
+          <Callout.Root color="amber">
+            <Callout.Icon>
+              <InfoCircledIcon />
+            </Callout.Icon>
+            <Callout.Text>
               {latestInfo ? (
-                <div className="break-words whitespace-pre-wrap">{latestInfo}</div>
+                <Text as="span" size="2" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {latestInfo}
+                </Text>
               ) : (
-                <div className="text-xs text-gray-400">No details yet</div>
+                <Text size="1" color="gray">No details yet</Text>
               )}
-            </div>
-          </div>
+            </Callout.Text>
+          </Callout.Root>
         )}
+
         {showLogs && (
-          <div
-            ref={logContainerRef}
-            onScroll={handleScroll}
-            className="space-y-1 bg-gray-900 rounded p-2 h-[40vh] sm:h-[60vh] overflow-y-auto text-xs sm:text-sm"
-            style={{ scrollBehavior: "auto" }}
-          >
-            {logs.map((line, i) => (
-              <div key={i} className="break-words whitespace-pre-wrap">
-                {line}
-              </div>
-            ))}
-            <div ref={logEndRef} />
-          </div>
+          <Box style={{ height: '60vh', overflowY: 'auto' }} ref={logContainerRef} onScroll={handleScroll}>
+            <Flex direction="column" gap="1" p="2">
+              {logs.map((line, i) => (
+                <Text key={i} size="1" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {line}
+                </Text>
+              ))}
+              <div ref={logEndRef} />
+            </Flex>
+          </Box>
         )}
-      </div>
-    </div>
+      </Flex>
+    </Box>
   );
 }
 
