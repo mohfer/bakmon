@@ -31,6 +31,8 @@ function App() {
     speed: "0.000 MiB/s",
     eta: "--",
     elapsed: "--",
+    vmType: "--",
+    vmId: "--",
   });
 
   const logContainerRef = useRef<HTMLDivElement>(null);
@@ -85,6 +87,15 @@ function App() {
       if (matchElapsed) {
         setProgressDetail((prev) => ({ ...prev, elapsed: matchElapsed[1] }));
       }
+
+      const regexTarget = /vzdump-(qemu|lxc)-(\d+)-\d{4}_\d{2}_\d{2}-\d{2}_\d{2}_\d{2}/i;
+      const matchTarget = message.match(regexTarget);
+      if (matchTarget) {
+        const rawType = matchTarget[1].toLowerCase();
+        const vmType = rawType === "qemu" ? "VM" : "LXC";
+        const vmId = matchTarget[2];
+        setProgressDetail((prev) => ({ ...prev, vmType, vmId }));
+      }
     };
 
     return () => {
@@ -92,7 +103,7 @@ function App() {
         ws.close();
       }
     };
-  }, []);
+  }, [IP_SERVER, PORT]);
 
   useEffect(() => {
     if (autoScroll && logContainerRef.current) {
@@ -129,6 +140,7 @@ function App() {
 
         <Box>
           <Flex direction="column" gap="1">
+            <Text size="2">Target: {progressDetail.vmType} {progressDetail.vmId}</Text>
             <Text size="2">Transferred: {progressDetail.transferred}</Text>
             <Text size="2">Total: {progressDetail.total}</Text>
             <Text size="2">Percent: {progressDetail.percent}%</Text>

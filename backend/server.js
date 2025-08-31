@@ -30,7 +30,17 @@ const wss = new WebSocketServer({ server });
 wss.on("connection", (ws) => {
     console.log("Client connected");
 
-    const tail = spawn("tail", ["-f", LOG_FILE]);
+    const tailArgs = [];
+    const tailFromStart = (process.env.TAIL_FROM_START || "").toLowerCase();
+    if (tailFromStart === "true" || tailFromStart === "1") {
+        tailArgs.push("-n", "+1");
+    } else {
+        const n = String(process.env.TAIL_N || 100);
+        tailArgs.push("-n", n);
+    }
+    tailArgs.push("-f", LOG_FILE);
+
+    const tail = spawn("tail", tailArgs);
 
     tail.stdout.on("data", (data) => {
         ws.send(data.toString());
