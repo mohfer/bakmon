@@ -1,11 +1,5 @@
 services:
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        VITE_IP_SERVER: ${VITE_IP_SERVER:-localhost}
-        VITE_PORT: ${VITE_PORT:-4000}
     container_name: backup-monitor-frontend
     ports:
       - "5173:80"
