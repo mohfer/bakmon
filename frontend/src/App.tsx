@@ -14,6 +14,8 @@ function App() {
   const IP_SERVER = import.meta.env.VITE_IP_SERVER || "localhost";
   const PORT = import.meta.env.VITE_PORT || 4000;
 
+  const MAX_LOGS = 1000;
+
   const [logs, setLogs] = useState<string[]>([]);
   const [status, setStatus] = useState("Connecting...");
   const [showLogs, setShowLogs] = useState(false);
@@ -43,22 +45,31 @@ function App() {
 
     ws.onopen = () => setStatus("✅ Connected to backend");
     ws.onclose = () => setStatus("❌ Disconnected from backend");
-    // ws.onerror = (err) => {
-    //   console.error("WebSocket error:", err);
-    //   setStatus("⚠️ Error connecting to backend");
-    // };
 
     ws.onmessage = (event: MessageEvent) => {
       const message =
         typeof event.data === "string" ? event.data : JSON.stringify(event.data);
 
       const newLines = message.split(/\r?\n/).filter(Boolean);
-      setLogs((prev) => [...prev, ...newLines]);
+
+      setLogs((prev) => {
+        const updated = [...prev, ...newLines];
+        if (updated.length > MAX_LOGS) {
+          return updated.slice(updated.length - MAX_LOGS);
+        }
+        return updated;
+      });
 
       const infoRegex = /^(?:\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\s=>|INFO:|===)/;
       const matched = newLines.filter((ln) => infoRegex.test(ln));
       if (matched.length) {
-        setInfoLines((prev) => [...prev, ...matched]);
+        setInfoLines((prev) => {
+          const updated = [...prev, ...matched];
+          if (updated.length > 100) {
+            return updated.slice(updated.length - 100);
+          }
+          return updated;
+        });
       }
 
       const regexPercent = /(\d{1,3})%/;
@@ -69,7 +80,7 @@ function App() {
       }
 
       const regexDetail =
-        /([\d.]+\s\w+) \/ ([\d.]+\s\w+), (\d{1,3})%, ([\d.]+\s\w+\/s), ETA ([\dhms.]+)/i;
+        /([\d.]+\s\w+) \/ ([\d.]+\s\w+), (\d{1,3})%, ([\d.]+\s\w+\/s), ETA ([\dywdhms.]+)/i;
       const matchDetail = message.match(regexDetail);
       if (matchDetail) {
         setProgressDetail((prev) => ({
@@ -82,7 +93,7 @@ function App() {
         }));
       }
 
-      const regexElapsed = /Elapsed time:\s+([\dhms.]+)/i;
+      const regexElapsed = /Elapsed time:\s+([\dywdhms.]+)/i;
       const matchElapsed = message.match(regexElapsed);
       if (matchElapsed) {
         setProgressDetail((prev) => ({ ...prev, elapsed: matchElapsed[1] }));
