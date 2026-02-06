@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: bakmon-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - /var/log:/var/log:ro
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_IP_SERVER: ${VITE_IP_SERVER:-localhost}
+        VITE_PORT: ${VITE_PORT:-4000}
+    container_name: bakmon-frontend
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+    depends_on:
+      - backend

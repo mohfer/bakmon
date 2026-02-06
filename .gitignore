@@ -1,7 +1,3 @@
-############################################
-# Root .gitignore for backend + frontend   #
-############################################
-
 # OS / Editor junk
 .DS_Store
 Thumbs.db
