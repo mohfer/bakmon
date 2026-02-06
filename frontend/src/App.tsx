@@ -14,6 +14,10 @@ function App() {
   const IP_SERVER = import.meta.env.VITE_IP_SERVER || "localhost";
   const PORT = import.meta.env.VITE_PORT || 4000;
 
+  const isLocalOrIP = /^(localhost|127\.0\.0\.1|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i.test(IP_SERVER);
+  const wsProtocol = isLocalOrIP ? "ws" : "wss";
+  const wsUrl = `${wsProtocol}://${IP_SERVER}:${PORT}`;
+
   const MAX_LOGS = 1000;
 
   const [logs, setLogs] = useState<string[]>([]);
@@ -41,7 +45,7 @@ function App() {
   const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://${IP_SERVER}:${PORT}`);
+    const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => setStatus("✅ Connected to backend");
     ws.onclose = () => setStatus("❌ Disconnected from backend");
@@ -114,7 +118,7 @@ function App() {
         ws.close();
       }
     };
-  }, [IP_SERVER, PORT]);
+  }, [wsUrl]);
 
   useEffect(() => {
     if (autoScroll && logContainerRef.current) {
