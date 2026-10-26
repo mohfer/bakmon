@@ -3,9 +3,31 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Backup Monitor</title>
+  <meta name="description" content="Bakmon — real-time backup progress and logs for Proxmox." />
+  <meta id="theme-color" name="theme-color" content="#ffffff" />
+  <title>Bakmon — Backup Monitor</title>
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem("bakmon-theme");
+        var isDark = stored
+          ? stored === "dark"
+          : window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        document.documentElement.classList.toggle("dark", isDark);
+        document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+
+        var meta = document.getElementById("theme-color");
+        if (meta) {
+          meta.setAttribute("content", isDark ? "#000000" : "#ffffff");
+        }
+      } catch (error) {
+        // Keep the default light theme when storage is unavailable.
+      }
+    })();
+  </script>
 </head>
 
 <body>

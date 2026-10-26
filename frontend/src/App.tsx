@@ -1,14 +1,12 @@
-import { useEffect, useState, useRef } from "react";
-import {
-  Box,
-  Button,
-  Callout,
-  Flex,
-  Progress,
-  Switch,
-  Text,
-} from "@radix-ui/themes";
-import { CheckCircledIcon, CrossCircledIcon, InfoCircledIcon } from "@radix-ui/react-icons";
+import { useEffect, useRef, useState } from "react";
+import { WifiOff } from "lucide-react";
+import { Footer } from "./components/Footer";
+import { Header } from "./components/Header";
+import { InfoPanel } from "./components/InfoPanel";
+import { LogConsole } from "./components/LogConsole";
+import { PageHeader } from "./components/PageHeader";
+import { ProgressPanel } from "./components/ProgressPanel";
+import type { ConnectionState, ProgressDetail } from "./types";
 
 function App() {
   const IP_SERVER = import.meta.env.VITE_IP_SERVER || "localhost";
@@ -30,7 +28,7 @@ function App() {
 
   const latestInfo = infoLines[infoLines.length - 1] || "";
 
-  const [progressDetail, setProgressDetail] = useState({
+  const [progressDetail, setProgressDetail] = useState<ProgressDetail>({
     transferred: "0.000 GiB",
     total: "0.000 GiB",
     percent: 0,
@@ -42,7 +40,6 @@ function App() {
   });
 
   const logContainerRef = useRef<HTMLDivElement>(null);
-  const logEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const ws = new WebSocket(wsUrl);
@@ -125,7 +122,7 @@ function App() {
       const container = logContainerRef.current;
       container.scrollTop = container.scrollHeight;
     }
-  }, [logs, autoScroll]);
+  }, [logs, autoScroll, showLogs]);
 
   const handleScroll = () => {
     const container = logContainerRef.current;
@@ -137,93 +134,102 @@ function App() {
     setAutoScroll(isAtBottom);
   };
 
+  const handleScrollToBottom = () => {
+    const container = logContainerRef.current;
+    if (container) {
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: reduceMotion ? "auto" : "smooth",
+      });
+    }
+
+    setAutoScroll(true);
+  };
+
+  const connectionState: ConnectionState = status.startsWith("✅")
+    ? "connected"
+    : status.startsWith("❌")
+      ? "disconnected"
+      : "connecting";
+
+  const hasTarget = progressDetail.vmId !== "--";
+  const target = hasTarget
+    ? `${progressDetail.vmType} ${progressDetail.vmId}`
+    : "Awaiting job";
+  const isLoading = connectionState === "connecting" && logs.length === 0;
+
   return (
-    <Box p={{ initial: "2", sm: "4" }}>
-      <Flex direction="column" gap="3">
-        <Callout.Root color={status.startsWith("✅") ? "grass" : status.startsWith("❌") ? "tomato" : "amber"}>
-          <Callout.Icon>
-            {status.startsWith("✅") ? (
-              <CheckCircledIcon />
-            ) : status.startsWith("❌") ? (
-              <CrossCircledIcon />
-            ) : (
-              <InfoCircledIcon />
-            )}
-          </Callout.Icon>
-          <Callout.Text>{status}</Callout.Text>
-        </Callout.Root>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:text-foreground"
+      >
+        Skip to content
+      </a>
 
-        <Box>
-          <Flex direction="column" gap="1">
-            <Text size="2">Target: {progressDetail.vmType} {progressDetail.vmId}</Text>
-            <Text size="2">Transferred: {progressDetail.transferred}</Text>
-            <Text size="2">Total: {progressDetail.total}</Text>
-            <Text size="2">Percent: {progressDetail.percent}%</Text>
-            <Text size="2">Speed: {progressDetail.speed}</Text>
-            <Text size="2">ETA: {progressDetail.eta}</Text>
-            <Text size="2">Elapsed time: {progressDetail.elapsed}</Text>
-          </Flex>
-        </Box>
+      <Header state={connectionState} />
 
-        <Flex gap="2" wrap="wrap" align="center">
-          <Button variant="soft" color="yellow" onClick={() => setShowLogs((p) => !p)}>
-            {showLogs ? "Hide Logs" : "Show Logs"}
-          </Button>
-          {!autoScroll && (
-            <Button color="grass" onClick={() => {
-              logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-              setAutoScroll(true);
-            }}>
-              Scroll to Bottom
-            </Button>
-          )}
-          <Button color="indigo" variant="soft" onClick={() => setShowInfo((s) => !s)}>
-            {showInfo ? "Hide Info" : "Show Info"}
-          </Button>
-          <Flex align="center" gap="2">
-            <Text size="2">Auto-scroll</Text>
-            <Switch checked={autoScroll} onCheckedChange={(v) => setAutoScroll(Boolean(v))} />
-          </Flex>
-        </Flex>
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-[1200px] flex-1 px-5 pb-20 pt-12 sm:px-8 sm:pt-16"
+      >
+        <PageHeader target={target} hasTarget={hasTarget} endpoint={wsUrl} />
 
-        <Box>
-          <Progress value={progress} variant="surface" />
-          <Flex justify="end">
-            <Text size="1" color="amber">{progress}%</Text>
-          </Flex>
-        </Box>
+        {connectionState === "disconnected" ? (
+          <div
+            role="alert"
+            className="animate-enter mt-8 flex items-start gap-3 rounded-[10px] border border-border bg-surface px-4 py-3.5 sm:px-5"
+          >
+            <WifiOff
+              size={16}
+              strokeWidth={1.75}
+              className="mt-0.5 shrink-0 text-danger"
+              aria-hidden="true"
+            />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Backend connection closed
+              </p>
+              <p className="mt-0.5 text-xs leading-5 text-muted">
+                Reload the page to start a new WebSocket connection.
+              </p>
+            </div>
+          </div>
+        ) : null}
 
-        {showInfo && (
-          <Callout.Root color="amber">
-            <Callout.Icon>
-              <InfoCircledIcon />
-            </Callout.Icon>
-            <Callout.Text>
-              {latestInfo ? (
-                <Text as="span" size="2" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                  {latestInfo}
-                </Text>
-              ) : (
-                <Text size="1" color="gray">No details yet</Text>
-              )}
-            </Callout.Text>
-          </Callout.Root>
-        )}
+        <div className="mt-8 flex flex-col gap-4 sm:mt-10 sm:gap-5">
+          <ProgressPanel
+            progress={progress}
+            detail={progressDetail}
+            loading={isLoading}
+          />
 
-        {showLogs && (
-          <Box style={{ height: '60vh', overflowY: 'auto' }} ref={logContainerRef} onScroll={handleScroll}>
-            <Flex direction="column" gap="1" p="2">
-              {logs.map((line, i) => (
-                <Text key={i} size="1" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                  {line}
-                </Text>
-              ))}
-              <div ref={logEndRef} />
-            </Flex>
-          </Box>
-        )}
-      </Flex>
-    </Box>
+          <InfoPanel
+            info={latestInfo}
+            visible={showInfo}
+            onToggle={() => setShowInfo((current) => !current)}
+          />
+
+          <LogConsole
+            logs={logs}
+            visible={showLogs}
+            autoScroll={autoScroll}
+            state={connectionState}
+            containerRef={logContainerRef}
+            onToggle={() => setShowLogs((current) => !current)}
+            onAutoScrollChange={setAutoScroll}
+            onScroll={handleScroll}
+            onScrollToBottom={handleScrollToBottom}
+          />
+        </div>
+      </main>
+
+      <Footer endpoint={wsUrl} />
+    </div>
   );
 }
 
