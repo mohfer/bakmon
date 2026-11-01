@@ -1,6 +1,6 @@
 # Bakmon
 
-A simple app to monitor home server backup progress in real time over WebSocket. The frontend shows connection status, a progress bar, detailed progress (transferred, total, speed, ETA, elapsed), and line-by-line logs. It also shows the latest single-line info from the backend (lines starting with `INFO:`, timestamped `=>`, or summary `=== ... ===`).
+A simple app to monitor home server backup progress in real time over WebSocket. The frontend shows connection status, phase-aware progress (snapshot vs upload), detailed metrics (transferred, total, speed, ETA, elapsed), a structured latest-event panel with recent milestones, and line-by-line logs. It reads the current run from the backend, so refreshing mid-run or after completion keeps the full summary.
 
 ## Tech Stack
 
@@ -12,6 +12,9 @@ A simple app to monitor home server backup progress in real time over WebSocket.
 ## Features
 
 - Real-time backup progress monitoring via WebSocket
+- Phase-aware progress for vzdump snapshots and rclone uploads
+- Structured latest event with recent milestones, warnings, and job counts
+- Replays the current run's milestones on connect, even when the page opens mid-run or after completion
 - Dynamic WebSocket protocol (ws:// for local/IP, wss:// for domain)
 - Progress bar with detailed metrics (speed, ETA, elapsed time)
 - Live log viewer with auto-scroll
@@ -54,6 +57,7 @@ bakmon/
    PORT=4000
 
    # Log monitoring configuration
+   LOG_DIR=/var/log
    TAIL_FROM_START=false
    TAIL_N=100
 
@@ -61,6 +65,13 @@ bakmon/
    VITE_IP_SERVER=localhost  # Use domain for wss://
    VITE_PORT=4000
    ```
+
+   **Log monitoring options:**
+
+   - `LOG_DIR` — directory containing `backup-vm-YYYY-MM-DD.log` (default `/var/log`; when using Docker, mount it into the backend container).
+   - `TAIL_FROM_START=false` — on connect, replay the current run's milestones (progress noise filtered out), then follow new lines.
+   - `TAIL_FROM_START=true` — replay the entire log from line one; useful for debugging.
+   - `TAIL_N` — trailing line count used only when no run context can be read.
 
 3. **Build and run:**
 

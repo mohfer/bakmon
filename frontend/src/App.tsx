@@ -6,7 +6,12 @@ import { InfoPanel } from "./components/InfoPanel";
 import { LogConsole } from "./components/LogConsole";
 import { PageHeader } from "./components/PageHeader";
 import { ProgressPanel } from "./components/ProgressPanel";
-import type { ConnectionState, ProgressDetail } from "./types";
+import { applyLogLine, createInitialBackupState } from "./lib/backupParser";
+import type {
+  BackupState,
+  ConnectionState,
+  ProgressDetail,
+} from "./types";
 
 function App() {
   const IP_SERVER = import.meta.env.VITE_IP_SERVER || "localhost";
@@ -19,39 +24,48 @@ function App() {
   const MAX_LOGS = 1000;
 
   const [logs, setLogs] = useState<string[]>([]);
-  const [status, setStatus] = useState("Connecting...");
+  const [connectionState, setConnectionState] =
+    useState<ConnectionState>("connecting");
+  const [backup, setBackup] = useState<BackupState>(createInitialBackupState);
   const [showLogs, setShowLogs] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [infoLines, setInfoLines] = useState<string[]>([]);
   const [showInfo, setShowInfo] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
 
-  const latestInfo = infoLines[infoLines.length - 1] || "";
-
-  const [progressDetail, setProgressDetail] = useState<ProgressDetail>({
-    transferred: "0.000 GiB",
-    total: "0.000 GiB",
-    percent: 0,
-    speed: "0.000 MiB/s",
-    eta: "--",
-    elapsed: "--",
-    vmType: "--",
-    vmId: "--",
-  });
-
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const lineBufferRef = useRef("");
 
   useEffect(() => {
+    let closed = false;
+
+    lineBufferRef.current = "";
+    setConnectionState("connecting");
+
     const ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => setStatus("✅ Connected to backend");
-    ws.onclose = () => setStatus("❌ Disconnected from backend");
+    ws.onopen = () => {
+      if (!closed) {
+        setConnectionState("connected");
+      }
+    };
+
+    ws.onclose = () => {
+      if (!closed) {
+        setConnectionState("disconnected");
+      }
+    };
 
     ws.onmessage = (event: MessageEvent) => {
       const message =
         typeof event.data === "string" ? event.data : JSON.stringify(event.data);
 
-      const newLines = message.split(/\r?\n/).filter(Boolean);
+      const combined = lineBufferRef.current + message;
+      const parts = combined.split(/\r?\n/);
+      lineBufferRef.current = parts.pop() ?? "";
+
+      const newLines = parts.filter((line) => line.length > 0);
+      if (newLines.length === 0) {
+        return;
+      }
 
       setLogs((prev) => {
         const updated = [...prev, ...newLines];
@@ -61,59 +75,18 @@ function App() {
         return updated;
       });
 
-      const infoRegex = /^(?:\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\s=>|INFO:|===)/;
-      const matched = newLines.filter((ln) => infoRegex.test(ln));
-      if (matched.length) {
-        setInfoLines((prev) => {
-          const updated = [...prev, ...matched];
-          if (updated.length > 100) {
-            return updated.slice(updated.length - 100);
-          }
-          return updated;
-        });
-      }
-
-      const regexPercent = /(\d{1,3})%/;
-      const matchPercent = message.match(regexPercent);
-      if (matchPercent) {
-        setProgress(Number(matchPercent[1]));
-        setProgressDetail((prev) => ({ ...prev, percent: Number(matchPercent[1]) }));
-      }
-
-      const regexDetail =
-        /([\d.]+\s\w+) \/ ([\d.]+\s\w+), (\d{1,3})%, ([\d.]+\s\w+\/s), ETA ([\dywdhms.]+)/i;
-      const matchDetail = message.match(regexDetail);
-      if (matchDetail) {
-        setProgressDetail((prev) => ({
-          ...prev,
-          transferred: matchDetail[1],
-          total: matchDetail[2],
-          percent: Number(matchDetail[3]),
-          speed: matchDetail[4],
-          eta: matchDetail[5],
-        }));
-      }
-
-      const regexElapsed = /Elapsed time:\s+([\dywdhms.]+)/i;
-      const matchElapsed = message.match(regexElapsed);
-      if (matchElapsed) {
-        setProgressDetail((prev) => ({ ...prev, elapsed: matchElapsed[1] }));
-      }
-
-      const regexTarget = /vzdump-(qemu|lxc)-(\d+)-\d{4}_\d{2}_\d{2}-\d{2}_\d{2}_\d{2}/i;
-      const matchTarget = message.match(regexTarget);
-      if (matchTarget) {
-        const rawType = matchTarget[1].toLowerCase();
-        const vmType = rawType === "qemu" ? "VM" : "LXC";
-        const vmId = matchTarget[2];
-        setProgressDetail((prev) => ({ ...prev, vmType, vmId }));
-      }
+      const receivedAt = Date.now();
+      setBackup((prev) =>
+        newLines.reduce(
+          (state, line) => applyLogLine(state, line, receivedAt),
+          prev,
+        ),
+      );
     };
 
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
+      closed = true;
+      ws.close();
     };
   }, [wsUrl]);
 
@@ -150,15 +123,15 @@ function App() {
     setAutoScroll(true);
   };
 
-  const connectionState: ConnectionState = status.startsWith("✅")
-    ? "connected"
-    : status.startsWith("❌")
-      ? "disconnected"
-      : "connecting";
+  const progressDetail: ProgressDetail = {
+    ...backup.progress,
+    vmType: backup.vm?.type ?? "--",
+    vmId: backup.vm?.id ?? "--",
+  };
 
-  const hasTarget = progressDetail.vmId !== "--";
+  const hasTarget = backup.vm !== null;
   const target = hasTarget
-    ? `${progressDetail.vmType} ${progressDetail.vmId}`
+    ? `${backup.vm?.type} ${backup.vm?.id}`
     : "Awaiting job";
   const isLoading = connectionState === "connecting" && logs.length === 0;
 
@@ -203,13 +176,13 @@ function App() {
 
         <div className="mt-8 flex flex-col gap-4 sm:mt-10 sm:gap-5">
           <ProgressPanel
-            progress={progress}
+            phase={backup.phase}
             detail={progressDetail}
             loading={isLoading}
           />
 
           <InfoPanel
-            info={latestInfo}
+            state={backup}
             visible={showInfo}
             onToggle={() => setShowInfo((current) => !current)}
           />

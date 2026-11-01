@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
 
-type BadgeTone = "neutral" | "muted";
+export type BadgeTone =
+  | "neutral"
+  | "muted"
+  | "success"
+  | "danger"
+  | "warning";
 
 interface BadgeProps {
   tone?: BadgeTone;
@@ -12,6 +17,9 @@ interface BadgeProps {
 const toneClasses: Record<BadgeTone, string> = {
   neutral: "border-border bg-surface text-foreground",
   muted: "border-border bg-transparent text-muted",
+  success: "border-success/30 bg-success/10 text-success",
+  danger: "border-danger/30 bg-danger/10 text-danger",
+  warning: "border-warning/30 bg-warning/10 text-warning",
 };
 
 export function Badge({ tone = "neutral", children, className }: BadgeProps) {

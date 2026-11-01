@@ -1,16 +1,38 @@
 import { cn } from "../lib/cn";
-import type { ProgressDetail } from "../types";
+import type { BackupPhase, ProgressDetail } from "../types";
+import { Badge } from "./ui/Badge";
+import type { BadgeTone } from "./ui/Badge";
 import { Panel, PanelHeader } from "./ui/Panel";
 import { Skeleton } from "./ui/Skeleton";
 
 interface ProgressPanelProps {
-  progress: number;
+  phase: BackupPhase;
   detail: ProgressDetail;
   loading: boolean;
 }
 
 const ticks = Array.from({ length: 21 }, (_, index) => index * 5);
 const tickLabels = [0, 25, 50, 75, 100];
+
+const phaseLabels: Record<BackupPhase, string> = {
+  idle: "Idle",
+  starting: "Starting",
+  snapshot: "Snapshot",
+  upload: "Upload",
+  waiting: "Waiting",
+  completed: "Completed",
+  failed: "Failed",
+};
+
+const phaseTones: Record<BackupPhase, BadgeTone> = {
+  idle: "muted",
+  starting: "warning",
+  snapshot: "warning",
+  upload: "warning",
+  waiting: "neutral",
+  completed: "success",
+  failed: "danger",
+};
 
 function ProgressSkeleton() {
   return (
@@ -41,21 +63,22 @@ function ProgressSkeleton() {
   );
 }
 
-export function ProgressPanel({
-  progress,
-  detail,
-  loading,
-}: ProgressPanelProps) {
+export function ProgressPanel({ phase, detail, loading }: ProgressPanelProps) {
   const metrics = [
     { label: "Transferred", value: detail.transferred },
-    { label: "Speed", value: detail.speed },
+    {
+      label: phase === "snapshot" ? "Read speed" : "Speed",
+      value: detail.speed,
+    },
     { label: "ETA", value: detail.eta },
     { label: "Elapsed", value: detail.elapsed },
   ];
 
   return (
     <Panel className="animate-enter [animation-delay:60ms]">
-      <PanelHeader label="Backup progress" />
+      <PanelHeader label="Backup progress">
+        <Badge tone={phaseTones[phase]}>{phaseLabels[phase]}</Badge>
+      </PanelHeader>
 
       <div className="px-5 py-6 sm:px-8 sm:py-7">
         {loading ? (
@@ -64,13 +87,13 @@ export function ProgressPanel({
           <>
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
               <span className="font-mono text-[48px] font-medium leading-none tracking-[-0.06em] tabular-nums sm:text-[64px]">
-                {progress}
+                {detail.percent}
                 <span className="ml-1 text-[28px] text-muted sm:text-[32px]">
                   %
                 </span>
               </span>
               <span className="pb-1 text-xs text-muted">
-                of {detail.total}
+                {detail.total === "--" ? "waiting for data" : `of ${detail.total}`}
               </span>
             </div>
 
@@ -80,8 +103,8 @@ export function ProgressPanel({
               aria-label="Backup progress"
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={progress}
-              aria-valuetext={`${progress}% — ${detail.transferred} of ${detail.total}`}
+              aria-valuenow={detail.percent}
+              aria-valuetext={`${detail.percent}% — ${detail.transferred}${detail.total === "--" ? "" : ` of ${detail.total}`}`}
             >
               <div className="relative h-12">
                 {ticks.map((tick) => {
@@ -103,15 +126,15 @@ export function ProgressPanel({
                 <div className="absolute inset-x-0 top-5 h-0.5 overflow-hidden bg-border">
                   <div
                     className="h-full bg-foreground transition-[width] duration-200 ease-out"
-                    style={{ width: `${progress}%` }}
+                    style={{ width: `${detail.percent}%` }}
                   />
                 </div>
 
-                {progress > 0 ? (
+                {detail.percent > 0 ? (
                   <span
                     aria-hidden="true"
                     className="absolute top-[17px] size-2 -translate-x-1/2 bg-foreground"
-                    style={{ left: `${progress}%` }}
+                    style={{ left: `${detail.percent}%` }}
                   />
                 ) : null}
 
